@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swift-bee-db-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swift-bee-db
+  template:
+    metadata:
+      labels:
+        app: swift-bee-db
+    spec:
+      containers:
+        - name: swift-bee-db
+          image: mysql:latest
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: root-password-mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: swift-bee-dev
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+            - name: mysql-initdb
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: swift-bee-pvc
+        - name: mysql-initdb
+          configMap:
+            name: swift-bee-mysql-init-config-map
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swift-bee-db-srv
+spec:
+  type: ClusterIP
+  selector:
+    app: swift-bee-db
+  ports:
+    - name: swift-bee-db
+      protocol: TCP
+      port: 3306
+      targetPort: 3306
+
